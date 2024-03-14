@@ -3,12 +3,15 @@
 
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <pcl/filters/approximate_voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
+#include <pcl/registration/ndt.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf2/LinearMath/Quaternion.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/transform_broadcaster.h>
 
 class PCMapFuser {
@@ -37,6 +40,10 @@ class PCMapFuser {
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_source_map_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_target_map_cloud;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr m_filtered_source_map_cloud;
+
+  pcl::ApproximateVoxelGrid<pcl::PointXYZ> m_approximate_voxel_filter;
+  pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> m_ndt;
 };
 
 #endif  // PCMAP_FUSER_H
