@@ -93,9 +93,6 @@ void PCMapFuser::initPoseCallback(
   Eigen::Matrix4f initial_estimate =
       tf2::transformToEigen(transform).matrix().cast<float>();
 
-  // Eigen::AngleAxisf init_rotation(0.6931, Eigen::Vector3f::UnitZ());
-  // Eigen::Translation3f init_translation(1.79387, 0.720047, 0);
-  // Eigen::Matrix4f init_guess = (init_translation * init_rotation).matrix();
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr dummy_cloud(
       new pcl::PointCloud<pcl::PointXYZ>);
