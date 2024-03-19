@@ -13,12 +13,17 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_source_map_cloud_pub =
       m_nh.advertise<sensor_msgs::PointCloud2>("/source_map_cloud", 1, true);
 
+  m_final_cloud_pub =
+      m_nh.advertise<sensor_msgs::PointCloud2>("/final_cloud", 1, true);
+
   m_tf_timer =
       m_nh.createTimer(ros::Duration(0.1), &PCMapFuser::tfTimerCallback, this);
 
   m_source_map_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
   m_target_map_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
   m_filtered_source_map_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  m_transformed.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  m_final_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
   // set initial values
   m_fixed_floating_transform.transform.translation.x = 1;
@@ -48,9 +53,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_approximate_voxel_filter.setLeafSize(0.2, 0.2, 0.2);
   m_approximate_voxel_filter.setInputCloud(m_source_map_cloud);
   m_approximate_voxel_filter.filter(*m_filtered_source_map_cloud);
-  // print filtered cloud size
-  std::cout << "Filtered cloud size: " << m_filtered_source_map_cloud->size()
-            << std::endl;
 
   // Setting scale dependent NDT parameters
   // Setting minimum transformation difference for termination
@@ -110,6 +112,13 @@ void PCMapFuser::initPoseCallback(
   std::cout << "GICP has converged: " << m_gicp.hasConverged()
             << " score: " << m_gicp.getFitnessScore() << std::endl;
 
+  pcl::transformPointCloud(*m_source_map_cloud, *m_transformed,
+                           m_gicp.getFinalTransformation());
+
+  *m_final_cloud = *m_target_map_cloud + *m_transformed;
+  pcl::toROSMsg(*m_final_cloud, m_final_cloud_ros);
+  m_final_cloud_ros.header.frame_id = "target_map";
+  m_final_cloud_pub.publish(m_final_cloud_ros);
 }
 
 void PCMapFuser::tfTimerCallback(const ros::TimerEvent &event) {

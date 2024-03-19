@@ -31,6 +31,7 @@ class PCMapFuser {
   ros::Subscriber m_init_pose_sub;
   ros::Publisher m_target_map_cloud_pub;
   ros::Publisher m_source_map_cloud_pub;
+  ros::Publisher m_final_cloud_pub;
 
   ros::Timer m_tf_timer;
 
@@ -39,7 +40,10 @@ class PCMapFuser {
   geometry_msgs::TransformStamped m_fixed_floating_transform;
   sensor_msgs::PointCloud2 m_source_map_cloud_ros;
   sensor_msgs::PointCloud2 m_target_map_cloud_ros;
+  sensor_msgs::PointCloud2 m_final_cloud_ros;
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr m_transformed;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr m_final_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_source_map_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_target_map_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_filtered_source_map_cloud;
