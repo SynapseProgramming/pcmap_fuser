@@ -14,6 +14,8 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+#include <fast_gicp/gicp/fast_vgicp.hpp>
+
 class PCMapFuser {
  public:
   PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh);
@@ -44,6 +46,7 @@ class PCMapFuser {
 
   pcl::ApproximateVoxelGrid<pcl::PointXYZ> m_approximate_voxel_filter;
   pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> m_ndt;
+  fast_gicp::FastVGICP<pcl::PointXYZ, pcl::PointXYZ> m_gicp;
 };
 
 #endif  // PCMAP_FUSER_H

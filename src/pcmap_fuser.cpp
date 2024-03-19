@@ -52,7 +52,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   std::cout << "Filtered cloud size: " << m_filtered_source_map_cloud->size()
             << std::endl;
 
-
   // Setting scale dependent NDT parameters
   // Setting minimum transformation difference for termination
   // condition.
@@ -65,6 +64,13 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_ndt.setMaximumIterations(100);
   m_ndt.setInputSource(m_filtered_source_map_cloud);
   m_ndt.setInputTarget(m_target_map_cloud);
+
+  m_gicp.setResolution(0.2);
+  m_gicp.setNumThreads(4);
+  m_gicp.setInputSource(m_source_map_cloud);
+  m_gicp.setInputTarget(m_target_map_cloud);
+  //   // set search method
+  m_gicp.setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT7);
 }
 
 void PCMapFuser::initPoseCallback(
@@ -77,13 +83,6 @@ void PCMapFuser::initPoseCallback(
       msg->pose.pose.position.z;
   m_fixed_floating_transform.transform.rotation = msg->pose.pose.orientation;
 
-  // print out the transform values
-  std::cout << "before: x: "
-            << m_fixed_floating_transform.transform.translation.x
-            << " y: " << m_fixed_floating_transform.transform.translation.y
-            << " z: " << m_fixed_floating_transform.transform.translation.z
-            << std::endl;
-
   geometry_msgs::Transform transform;
   transform.translation.x = msg->pose.pose.position.x;
   transform.translation.y = msg->pose.pose.position.y;
@@ -93,25 +92,24 @@ void PCMapFuser::initPoseCallback(
   Eigen::Matrix4f initial_estimate =
       tf2::transformToEigen(transform).matrix().cast<float>();
 
-
   pcl::PointCloud<pcl::PointXYZ>::Ptr dummy_cloud(
       new pcl::PointCloud<pcl::PointXYZ>);
+
   m_ndt.align(*dummy_cloud, initial_estimate);
+
   std::cout << "Normal Distributions Transform has converged: "
             << m_ndt.hasConverged() << " score: " << m_ndt.getFitnessScore()
             << std::endl;
 
+  m_gicp.align(*dummy_cloud, m_ndt.getFinalTransformation());
   Eigen::Affine3d final_transform;
-  final_transform.matrix() = m_ndt.getFinalTransformation().cast<double>();
+  final_transform.matrix() = m_gicp.getFinalTransformation().cast<double>();
   m_fixed_floating_transform.transform =
       tf2::eigenToTransform(final_transform).transform;
 
-  // print out the transform values
-  std::cout << "after: x: "
-            << m_fixed_floating_transform.transform.translation.x
-            << " y: " << m_fixed_floating_transform.transform.translation.y
-            << " z: " << m_fixed_floating_transform.transform.translation.z
-            << std::endl;
+  std::cout << "GICP has converged: " << m_gicp.hasConverged()
+            << " score: " << m_gicp.getFitnessScore() << std::endl;
+
 }
 
 void PCMapFuser::tfTimerCallback(const ros::TimerEvent &event) {
