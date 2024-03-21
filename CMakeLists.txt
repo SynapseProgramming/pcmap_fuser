@@ -20,7 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 
-
+find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common io)
 
 
@@ -30,11 +30,12 @@ catkin_package()
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
-    "${PROJECT_SOURCE_DIR}/include"
+  "${PROJECT_SOURCE_DIR}/include"
+  ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(pcmap_fuser_node src/pcmap_fuser.cpp src/pcmap_fuser_node.cpp)
-target_link_libraries(pcmap_fuser_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_INCLUDE_DIRS})
+add_executable(pcmap_fuser_node src/pcmap_fuser.cpp src/pcmap_fuser_node.cpp src/density_map.cpp)
+target_link_libraries(pcmap_fuser_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_INCLUDE_DIRS} ${OpenCV_LIBRARIES})
 
 
 

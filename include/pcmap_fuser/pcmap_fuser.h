@@ -13,6 +13,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <pcmap_fuser/density_map.hpp>
 
 #include <fast_gicp/gicp/fast_vgicp.hpp>
 
