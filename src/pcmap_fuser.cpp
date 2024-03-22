@@ -35,16 +35,18 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   // target cloud is the fixed map.
 
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/kranji_top.pcd", *m_target_map_cloud) ==
+          "/home/ro/Documents/rooms/decat_top.pcd", *m_target_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan1.pcd \n");
   }
   //  source cloud is the cloud to be transformed.
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/kranji_bottom.pcd", *m_source_map_cloud) ==
+          "/home/ro/Documents/rooms/decat_bottom.pcd", *m_source_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan2.pcd \n");
   }
+
+  m_orb_extractor = cv::ORB::create();
 
   std::pair<cv::Mat, Eigen::Vector2i> target_map_2d =
       map_closures::GenerateDensityMap(*m_target_map_cloud, 0.1, 0.05);
@@ -66,6 +68,35 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   cv::namedWindow("source_map", cv::WINDOW_NORMAL);
   cv::resizeWindow("source_map", 800, 600);
   cv::imshow("source_map", source_map_image);
+
+  // compute keypoints and descriptors
+  std::vector<cv::KeyPoint> target_keypoints;
+  cv::Mat target_descriptors;
+  m_orb_extractor->detectAndCompute(target_map_image, cv::Mat(),
+                                    target_keypoints, target_descriptors);
+
+  std::vector<cv::KeyPoint> source_keypoints;
+  cv::Mat source_descriptors;
+  m_orb_extractor->detectAndCompute(source_map_image, cv::Mat(),
+                                    source_keypoints, source_descriptors);
+
+  // match descriptors
+  cv::BFMatcher matcher(cv::NORM_HAMMING);
+  std::vector<cv::DMatch> matches;
+  matcher.match(target_descriptors, source_descriptors, matches);
+  std::sort(matches.begin(), matches.end(), [](const cv::DMatch &a, const cv::DMatch &b) {
+    return a.distance < b.distance;
+  });
+
+  // only keep the best 10 matches
+  matches.erase(matches.begin() + 10, matches.end());
+  // draw the best 10 matches
+  cv::Mat img_matches;
+  cv::drawMatches(target_map_image, target_keypoints, source_map_image,
+                  source_keypoints, matches, img_matches);
+  cv::namedWindow("matches", cv::WINDOW_NORMAL);
+  cv::resizeWindow("matches", 800, 600);
+  cv::imshow("matches", img_matches);
 
   cv::waitKey(0);
 

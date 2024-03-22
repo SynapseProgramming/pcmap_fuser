@@ -13,10 +13,12 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/transform_broadcaster.h>
-#include <pcmap_fuser/density_map.hpp>
 
 #include <fast_gicp/gicp/fast_vgicp.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/features2d.hpp>
 #include <opencv2/highgui.hpp>
+#include <pcmap_fuser/density_map.hpp>
 
 class PCMapFuser {
  public:
@@ -53,6 +55,8 @@ class PCMapFuser {
   pcl::ApproximateVoxelGrid<pcl::PointXYZ> m_approximate_voxel_filter;
   pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> m_ndt;
   fast_gicp::FastVGICP<pcl::PointXYZ, pcl::PointXYZ> m_gicp;
+
+  cv::Ptr<cv::DescriptorExtractor> m_orb_extractor;
 };
 
 #endif  // PCMAP_FUSER_H
