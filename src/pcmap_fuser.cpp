@@ -41,21 +41,32 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   }
   //  source cloud is the cloud to be transformed.
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/room_scan2.pcd", *m_source_map_cloud) ==
+          "/home/ro/Documents/rooms/kranji_bottom.pcd", *m_source_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan2.pcd \n");
   }
 
-  std::pair<cv::Mat, Eigen::Vector2i> generated_map =
+  std::pair<cv::Mat, Eigen::Vector2i> target_map_2d =
       map_closures::GenerateDensityMap(*m_target_map_cloud, 0.1, 0.05);
 
+  std::pair<cv::Mat, Eigen::Vector2i> source_map_2d =
+      map_closures::GenerateDensityMap(*m_source_map_cloud, 0.1, 0.05);
+
   // use opencv functions to display out map
-  cv::Mat map_image;
-  cv::normalize(generated_map.first, map_image, 0, 255, cv::NORM_MINMAX,
+  cv::Mat target_map_image;
+  cv::normalize(target_map_2d.first, target_map_image, 0, 255, cv::NORM_MINMAX,
                 CV_8UC1);
-  cv::namedWindow("map", cv::WINDOW_NORMAL);
-  cv::resizeWindow("map", 800, 600);
-  cv::imshow("map", map_image);
+  cv::namedWindow("target_map", cv::WINDOW_NORMAL);
+  cv::resizeWindow("target_map", 800, 600);
+  cv::imshow("target_map", target_map_image);
+
+  cv::Mat source_map_image;
+  cv::normalize(source_map_2d.first, source_map_image, 0, 255, cv::NORM_MINMAX,
+                CV_8UC1);
+  cv::namedWindow("source_map", cv::WINDOW_NORMAL);
+  cv::resizeWindow("source_map", 800, 600);
+  cv::imshow("source_map", source_map_image);
+
   cv::waitKey(0);
 
   pcl::toROSMsg(*m_source_map_cloud, m_source_map_cloud_ros);
