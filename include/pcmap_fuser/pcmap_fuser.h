@@ -19,6 +19,7 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/highgui.hpp>
 #include <pcmap_fuser/density_map.hpp>
+#include <pcmap_fuser/AlignRansac2D.hpp>
 
 class PCMapFuser {
  public:

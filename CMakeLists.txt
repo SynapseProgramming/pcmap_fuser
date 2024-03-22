@@ -34,7 +34,7 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(pcmap_fuser_node src/pcmap_fuser.cpp src/pcmap_fuser_node.cpp src/density_map.cpp)
+add_executable(pcmap_fuser_node src/pcmap_fuser.cpp src/pcmap_fuser_node.cpp src/density_map.cpp src/AlignRansac2D.cpp)
 target_link_libraries(pcmap_fuser_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_INCLUDE_DIRS} ${OpenCV_LIBRARIES})
 
 

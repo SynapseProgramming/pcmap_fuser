@@ -35,13 +35,13 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   // target cloud is the fixed map.
 
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/decat_top.pcd", *m_target_map_cloud) ==
+          "/home/ro/Documents/rooms/decat_bottom.pcd", *m_target_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan1.pcd \n");
   }
   //  source cloud is the cloud to be transformed.
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/decat_bottom.pcd", *m_source_map_cloud) ==
+          "/home/ro/Documents/rooms/decat_top.pcd", *m_source_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan2.pcd \n");
   }
@@ -84,13 +84,45 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   cv::BFMatcher matcher(cv::NORM_HAMMING);
   std::vector<cv::DMatch> matches;
   matcher.match(target_descriptors, source_descriptors, matches);
-  std::sort(matches.begin(), matches.end(), [](const cv::DMatch &a, const cv::DMatch &b) {
-    return a.distance < b.distance;
-  });
 
-  // only keep the best 10 matches
-  matches.erase(matches.begin() + 10, matches.end());
-  // draw the best 10 matches
+  auto source_map_lower_bound = source_map_2d.second;
+  auto target_map_lower_bound = target_map_2d.second;
+
+  std::vector<map_closures::PointPair> keypoint_pairs;
+  keypoint_pairs.reserve(matches.size());
+
+  std::sort(matches.begin(), matches.end(),
+            [](const cv::DMatch &a, const cv::DMatch &b) {
+              return a.distance < b.distance;
+            });
+
+  for (int i = 0; i < matches.size() / 2; i++) {
+    auto curr = matches[i];
+    auto target_keypoint = target_keypoints[curr.queryIdx].pt;
+    auto source_keypoint = source_keypoints[curr.trainIdx].pt;
+    keypoint_pairs.emplace_back(
+        Eigen::Vector2d(target_keypoint.x + target_map_lower_bound.y(),
+                        target_keypoint.y + target_map_lower_bound.x()),
+        Eigen::Vector2d(source_keypoint.x + source_map_lower_bound.y(),
+                        source_keypoint.y + source_map_lower_bound.x()));
+  }
+
+  if (matches.size() > 2) {
+    // compute the initial translation and rotation
+    Eigen::Isometry2d estimated_pose =
+        map_closures::KabschUmeyamaAlignment2D(keypoint_pairs);
+
+    // print out the estimated translation and rotation
+    std::cout << "Estimated translation: " << estimated_pose.translation().x()
+              << " " << estimated_pose.translation().y() << std::endl;
+
+    std::cout << "Estimated rotation: " << estimated_pose.linear().matrix()
+              << std::endl;
+  }
+
+  // only keep the best 20 matches
+  matches.erase(matches.begin() + 20, matches.end());
+  //   // draw the best 10 matches
   cv::Mat img_matches;
   cv::drawMatches(target_map_image, target_keypoints, source_map_image,
                   source_keypoints, matches, img_matches);
