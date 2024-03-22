@@ -1,6 +1,7 @@
 #include <pcmap_fuser/pcmap_fuser.h>
 
 #include <iostream>
+#include <opencv2/highgui.hpp>
 
 PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_nh = nh;
@@ -34,7 +35,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   // target cloud is the fixed map.
 
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/room_scan1.pcd", *m_target_map_cloud) ==
+          "/home/ro/Documents/rooms/kranji_top.pcd", *m_target_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan1.pcd \n");
   }
@@ -44,6 +45,18 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
       -1) {
     ROS_ERROR("Couldn't read file room_scan2.pcd \n");
   }
+
+  std::pair<cv::Mat, Eigen::Vector2i> generated_map =
+      map_closures::GenerateDensityMap(*m_target_map_cloud, 0.1, 0.05);
+
+  // use opencv functions to display out map
+  cv::Mat map_image;
+  cv::normalize(generated_map.first, map_image, 0, 255, cv::NORM_MINMAX,
+                CV_8UC1);
+  cv::namedWindow("map", cv::WINDOW_NORMAL);
+  cv::resizeWindow("map", 800, 600);
+  cv::imshow("map", map_image);
+  cv::waitKey(0);
 
   pcl::toROSMsg(*m_source_map_cloud, m_source_map_cloud_ros);
   pcl::toROSMsg(*m_target_map_cloud, m_target_map_cloud_ros);

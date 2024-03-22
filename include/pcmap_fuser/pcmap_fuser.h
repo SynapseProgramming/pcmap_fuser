@@ -16,6 +16,7 @@
 #include <pcmap_fuser/density_map.hpp>
 
 #include <fast_gicp/gicp/fast_vgicp.hpp>
+#include <opencv2/highgui.hpp>
 
 class PCMapFuser {
  public:
