@@ -28,11 +28,13 @@
 #include <opencv2/core.hpp>
 #include <utility>
 #include <vector>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 namespace map_closures {
 
 std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
-    const std::vector<Eigen::Vector3d> &pointcloud_map,
+    const pcl::PointCloud<pcl::PointXYZ> &pointcloud_map,
     const float density_map_resolution,
     const float density_threshold);
 }  // namespace map_closures

@@ -24,6 +24,8 @@
 #include <pcmap_fuser/density_map.hpp>
 
 #include <Eigen/Core>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include <algorithm>
 #include <opencv2/core.hpp>
 #include <utility>
@@ -40,7 +42,7 @@ using DensityMapType = std::map<Eigen::Vector2i, double, ComparePixels>;
 
 namespace map_closures {
 std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
-    const std::vector<Eigen::Vector3d> &pointcloud_map,
+    const pcl::PointCloud<pcl::PointXYZ> &pointcloud_map,
     const float density_map_resolution,
     const float density_threshold) {
     DensityMapType density_map;
@@ -52,9 +54,9 @@ std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
     double min_points = std::numeric_limits<double>::max();
 
     std::for_each(
-        pointcloud_map.cbegin(), pointcloud_map.cend(), [&](const Eigen::Vector3d &point) {
-            auto x_coord = static_cast<int>(std::floor(point[0] / density_map_resolution));
-            auto y_coord = static_cast<int>(std::floor(point[1] / density_map_resolution));
+        pointcloud_map.points.cbegin(), pointcloud_map.points.cend(), [&](const pcl::PointXYZ &point) {
+            auto x_coord = static_cast<int>(std::floor(point.x / density_map_resolution));
+            auto y_coord = static_cast<int>(std::floor(point.y / density_map_resolution));
             Eigen::Vector2i pixel(x_coord, y_coord);
             density_map[pixel] += 1.0;
             auto pixel_density = density_map[pixel];
