@@ -72,12 +72,12 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   // compute keypoints and descriptors
   std::vector<cv::KeyPoint> target_keypoints;
   cv::Mat target_descriptors;
-  m_orb_extractor->detectAndCompute(target_map_image, cv::Mat(),
+  m_orb_extractor->detectAndCompute(target_map_2d.first, cv::noArray(),
                                     target_keypoints, target_descriptors);
 
   std::vector<cv::KeyPoint> source_keypoints;
   cv::Mat source_descriptors;
-  m_orb_extractor->detectAndCompute(source_map_image, cv::Mat(),
+  m_orb_extractor->detectAndCompute(source_map_2d.first, cv::noArray(),
                                     source_keypoints, source_descriptors);
 
   // match descriptors
@@ -85,71 +85,71 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   std::vector<cv::DMatch> matches;
   matcher.match(target_descriptors, source_descriptors, matches);
 
-  auto source_map_lower_bound = source_map_2d.second;
-  auto target_map_lower_bound = target_map_2d.second;
 
-  std::vector<map_closures::PointPair> keypoint_pairs;
-  keypoint_pairs.reserve(matches.size());
+  // compute offset from initial estimate position
+  if (matches.size() >= 3) {
+    auto source_map_lower_bound = source_map_2d.second;
+    auto target_map_lower_bound = target_map_2d.second;
 
-  std::sort(matches.begin(), matches.end(),
-            [](const cv::DMatch &a, const cv::DMatch &b) {
-              return a.distance < b.distance;
-            });
+    std::vector<map_closures::PointPair> keypoint_pairs;
+    keypoint_pairs.reserve(matches.size());
 
-  // lower bount
+    std::sort(matches.begin(), matches.end(),
+              [](const cv::DMatch &a, const cv::DMatch &b) {
+                return a.distance < b.distance;
+              });
+    for (int i = 0; i < 3; i++) {
+      auto curr = matches[i];
+      auto target_keypoint = target_keypoints[curr.queryIdx].pt;
+      auto source_keypoint = source_keypoints[curr.trainIdx].pt;
+      keypoint_pairs.emplace_back(
+          Eigen::Vector2d(source_keypoint.x + source_map_lower_bound.y() + 10,
+                          source_keypoint.y + source_map_lower_bound.x()),
+          Eigen::Vector2d(target_keypoint.x + target_map_lower_bound.y(),
+                          target_keypoint.y + target_map_lower_bound.x()));
+    }
 
-  for (int i = 0; i < 4; i++) {
-    auto curr = matches[i];
-    auto target_keypoint = target_keypoints[curr.queryIdx].pt;
-    auto source_keypoint = source_keypoints[curr.trainIdx].pt;
-    keypoint_pairs.emplace_back(
-        Eigen::Vector2d(source_keypoint.x + source_map_lower_bound.y() + 10,
-                        source_keypoint.y + source_map_lower_bound.x()),
-        Eigen::Vector2d(target_keypoint.x + target_map_lower_bound.y(),
-                        target_keypoint.y + target_map_lower_bound.x()));
+    std::cout << "target lower x: " << target_map_lower_bound.x()
+              << " target lower y: " << target_map_lower_bound.y() << "\n";
 
-    // print out the keypoint pairs
-    std::cout << "x: " << target_keypoint.x + target_map_lower_bound.x() + 10
-              << " y: " << target_keypoint.y + target_map_lower_bound.y()
-              << "\n";
-  }
+    std::cout << "source lower x: " << source_map_lower_bound.x()
+              << " source lower y: " << source_map_lower_bound.y() << "\n";
 
-  std::cout << "target lower x: " << target_map_lower_bound.x()
-            << " target lower y: " << target_map_lower_bound.y() << "\n";
+    std::vector<cv::DMatch> print_matches;
+    for (int i = 0; i < 3; i++) {
+      print_matches.push_back(matches[i]);
+    }
 
-  std::cout << "source lower x: " << source_map_lower_bound.x()
-            << " source lower y: " << source_map_lower_bound.y() << "\n";
-
-  std::vector<cv::DMatch> print_matches;
-  for (int i = 0; i < 4; i++) {
-    print_matches.push_back(matches[i]);
-  }
-
-  if (matches.size() > 2) {
     // compute the initial translation and rotation
-    Eigen::Isometry2d estimated_pose =
+    Eigen::Isometry2d estimated_offset =
         map_closures::KabschUmeyamaAlignment2D(keypoint_pairs);
 
     // print out the estimated translation and rotation
-    std::cout << "Estimated translation: " << estimated_pose.translation().x()
-              << " " << estimated_pose.translation().y() << std::endl;
+    std::cout << "Estimated translation: " << estimated_offset.translation().x()
+              << " " << estimated_offset.translation().y() << std::endl;
 
-    std::cout << "Estimated rotation: " << estimated_pose.linear().matrix()
+    std::cout << "Estimated rotation: " << estimated_offset.linear().matrix()
               << std::endl;
+
+    // apply estimated offset from initial position
+    m_fixed_floating_transform.transform.translation.x +=
+        estimated_offset.translation().x() / 10.0;
+    m_fixed_floating_transform.transform.translation.y +=
+        estimated_offset.translation().y() / 10.0;
+
+    // TODO: Apply orientation offset
+
+    // cv::Mat img_matches;
+    // cv::drawMatches(target_map_image, target_keypoints, source_map_image,
+    //                 source_keypoints, print_matches, img_matches);
+    // cv::namedWindow("matches", cv::WINDOW_NORMAL);
+    // cv::resizeWindow("matches", 800, 600);
+    // cv::imshow("matches", img_matches);
+
+    // cv::waitKey(0);
+  } else {
+    ROS_WARN("Automated initialization is not available.");
   }
-
-  //   // only keep the best 20 matches
-  //   matches.erase(matches.begin() + 4, matches.end());
-
-  //   // draw the best 10 matches
-//   cv::Mat img_matches;
-//   cv::drawMatches(target_map_image, target_keypoints, source_map_image,
-//                   source_keypoints, print_matches, img_matches);
-//   cv::namedWindow("matches", cv::WINDOW_NORMAL);
-//   cv::resizeWindow("matches", 800, 600);
-//   cv::imshow("matches", img_matches);
-
-//   cv::waitKey(0);
 
   pcl::toROSMsg(*m_source_map_cloud, m_source_map_cloud_ros);
   pcl::toROSMsg(*m_target_map_cloud, m_target_map_cloud_ros);
@@ -183,22 +183,10 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
 
 void PCMapFuser::initPoseCallback(
     const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg) {
-  m_fixed_floating_transform.transform.translation.x =
-      msg->pose.pose.position.x;
-  m_fixed_floating_transform.transform.translation.y =
-      msg->pose.pose.position.y;
-  m_fixed_floating_transform.transform.translation.z =
-      msg->pose.pose.position.z;
-  m_fixed_floating_transform.transform.rotation = msg->pose.pose.orientation;
-
-  geometry_msgs::Transform transform;
-  transform.translation.x = msg->pose.pose.position.x;
-  transform.translation.y = msg->pose.pose.position.y;
-  transform.translation.z = msg->pose.pose.position.z;
-  transform.rotation = msg->pose.pose.orientation;
-
   Eigen::Matrix4f initial_estimate =
-      tf2::transformToEigen(transform).matrix().cast<float>();
+      tf2::transformToEigen(m_fixed_floating_transform.transform)
+          .matrix()
+          .cast<float>();
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr dummy_cloud(
       new pcl::PointCloud<pcl::PointXYZ>);
