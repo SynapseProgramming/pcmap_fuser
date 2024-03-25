@@ -36,18 +36,12 @@ namespace map_closures {
 
 Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs) {
-  //   auto mean =
-  //       std::reduce(keypoint_pairs.cbegin(), keypoint_pairs.cend(),
-  //                   map_closures::PointPair(), [](auto lhs, const auto &rhs)
-  //                   {
-  //                     lhs.ref += rhs.ref;
-  //                     lhs.query += rhs.query;
-  //                     return lhs;
-  //                   });
 
+
+//  compute the centroids (mean value) of the keypoints
   auto mean = map_closures::PointPair();
   for (auto &it : keypoint_pairs) {
-    mean.ref += it.ref;
+    mean.ref += it.ref; 
     mean.query += it.query;
   }
   mean.query /= keypoint_pairs.size();
@@ -56,6 +50,7 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
   std::vector<Eigen::Matrix2d> transformed;
   transformed.reserve(keypoint_pairs.size());
 
+ // transform to the same origin
   for (int i = 0; i < transformed.size(); i++) {
     transformed[i] = (keypoint_pairs[i].ref - mean.ref) *
                      ((keypoint_pairs[i].query - mean.query).transpose());
@@ -77,6 +72,8 @@ Eigen::Isometry2d KabschUmeyamaAlignment2D(
   Eigen::JacobiSVD<Eigen::Matrix2d> svd(
       covariance_matrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
   Eigen::Isometry2d T = Eigen::Isometry2d::Identity();
+
+  //compute rotation matrix
   const Eigen::Matrix2d &&R = svd.matrixV() * svd.matrixU().transpose();
   T.linear() = R.determinant() > 0 ? R : -R;
   T.translation() = mean.query - R * mean.ref;

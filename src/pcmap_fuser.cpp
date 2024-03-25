@@ -35,13 +35,13 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   // target cloud is the fixed map.
 
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/decat_bottom.pcd", *m_target_map_cloud) ==
+          "/home/ro/Documents/rooms/decat_top.pcd", *m_target_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan1.pcd \n");
   }
   //  source cloud is the cloud to be transformed.
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/decat_top.pcd", *m_source_map_cloud) ==
+          "/home/ro/Documents/rooms/decat_bottom.pcd", *m_source_map_cloud) ==
       -1) {
     ROS_ERROR("Couldn't read file room_scan2.pcd \n");
   }
@@ -96,15 +96,33 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
               return a.distance < b.distance;
             });
 
-  for (int i = 0; i < matches.size() / 2; i++) {
+  // lower bount
+
+  for (int i = 0; i < 4; i++) {
     auto curr = matches[i];
     auto target_keypoint = target_keypoints[curr.queryIdx].pt;
     auto source_keypoint = source_keypoints[curr.trainIdx].pt;
     keypoint_pairs.emplace_back(
+        Eigen::Vector2d(source_keypoint.x + source_map_lower_bound.y() + 10,
+                        source_keypoint.y + source_map_lower_bound.x()),
         Eigen::Vector2d(target_keypoint.x + target_map_lower_bound.y(),
-                        target_keypoint.y + target_map_lower_bound.x()),
-        Eigen::Vector2d(source_keypoint.x + source_map_lower_bound.y(),
-                        source_keypoint.y + source_map_lower_bound.x()));
+                        target_keypoint.y + target_map_lower_bound.x()));
+
+    // print out the keypoint pairs
+    std::cout << "x: " << target_keypoint.x + target_map_lower_bound.x() + 10
+              << " y: " << target_keypoint.y + target_map_lower_bound.y()
+              << "\n";
+  }
+
+  std::cout << "target lower x: " << target_map_lower_bound.x()
+            << " target lower y: " << target_map_lower_bound.y() << "\n";
+
+  std::cout << "source lower x: " << source_map_lower_bound.x()
+            << " source lower y: " << source_map_lower_bound.y() << "\n";
+
+  std::vector<cv::DMatch> print_matches;
+  for (int i = 0; i < 4; i++) {
+    print_matches.push_back(matches[i]);
   }
 
   if (matches.size() > 2) {
@@ -120,17 +138,18 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
               << std::endl;
   }
 
-  // only keep the best 20 matches
-  matches.erase(matches.begin() + 20, matches.end());
-  //   // draw the best 10 matches
-  cv::Mat img_matches;
-  cv::drawMatches(target_map_image, target_keypoints, source_map_image,
-                  source_keypoints, matches, img_matches);
-  cv::namedWindow("matches", cv::WINDOW_NORMAL);
-  cv::resizeWindow("matches", 800, 600);
-  cv::imshow("matches", img_matches);
+  //   // only keep the best 20 matches
+  //   matches.erase(matches.begin() + 4, matches.end());
 
-  cv::waitKey(0);
+  //   // draw the best 10 matches
+//   cv::Mat img_matches;
+//   cv::drawMatches(target_map_image, target_keypoints, source_map_image,
+//                   source_keypoints, print_matches, img_matches);
+//   cv::namedWindow("matches", cv::WINDOW_NORMAL);
+//   cv::resizeWindow("matches", 800, 600);
+//   cv::imshow("matches", img_matches);
+
+//   cv::waitKey(0);
 
   pcl::toROSMsg(*m_source_map_cloud, m_source_map_cloud_ros);
   pcl::toROSMsg(*m_target_map_cloud, m_target_map_cloud_ros);
