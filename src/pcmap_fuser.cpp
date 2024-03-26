@@ -89,7 +89,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   matcher.match(target_descriptors, source_descriptors, matches);
 
   // compute offset from initial estimate position
-  if (matches.size() >= 2) {
+  if (matches.size() >= 3) {
     auto source_map_lower_bound = source_map_2d.second;
     auto target_map_lower_bound = target_map_2d.second;
 
@@ -100,7 +100,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
               [](const cv::DMatch &a, const cv::DMatch &b) {
                 return a.distance < b.distance;
               });
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
       auto curr = matches[i];
       auto target_keypoint = target_keypoints[curr.queryIdx].pt;
       auto source_keypoint = source_keypoints[curr.trainIdx].pt;
@@ -127,8 +127,8 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
     // source_map_lower_bound.x()/10.0, source_map_lower_bound.y()/10.0);
     addMarker("ref1", 11.1, -61.62);
     addMarker("ref2", 9.42, -60.0);
-    addMarker("sour1", 13.9, -46.9);
-    addMarker("sour2", 13.6, -49.1);
+    addMarker("query1", 13.9, -46.9);
+    addMarker("query2", 13.6, -49.1);
     addMarker("source_lowest", -60.7, -99.3);
 
     // find the smallest x and y values in the m_source_map_cloud
@@ -146,7 +146,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
     std::cout << "min x: " << min_x << " min y: " << min_y << std::endl;
 
     std::vector<cv::DMatch> print_matches;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
       print_matches.push_back(matches[i]);
     }
 
@@ -162,12 +162,20 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
               << std::endl;
 
     // apply estimated offset from initial position
-    // m_fixed_floating_transform.transform.translation.x +=
-    //     estimated_offset.translation().x() / 10.0;
-    // m_fixed_floating_transform.transform.translation.y +=
-    //     estimated_offset.translation().y() / 10.0;
+    m_fixed_floating_transform.transform.translation.x +=
+        estimated_offset.translation().x() / 10.0;
+    m_fixed_floating_transform.transform.translation.y +=
+        estimated_offset.translation().y() / 10.0;
 
-    // TODO: Apply orientation offset
+    // convert the rotation matrix to quaternion
+    Eigen::Matrix3d rotation_matrix_3d = Eigen::Matrix3d::Identity();
+    rotation_matrix_3d.block<2, 2>(0, 0) = estimated_offset.linear();
+    Eigen::Quaterniond q(rotation_matrix_3d);
+    // set the quaternion to be the one above
+    m_fixed_floating_transform.transform.rotation.x = q.x();
+    m_fixed_floating_transform.transform.rotation.y = q.y();
+    m_fixed_floating_transform.transform.rotation.z = q.z();
+    m_fixed_floating_transform.transform.rotation.w = q.w();
 
     // cv::Mat img_matches;
     // cv::drawMatches(target_map_image, target_keypoints, source_map_image,
@@ -262,7 +270,7 @@ void PCMapFuser::tfTimerCallback(const ros::TimerEvent &event) {
 
 void PCMapFuser::addMarker(std::string name, double x, double y) {
   visualization_msgs::Marker marker;
-  marker.header.frame_id = "source_map";
+  marker.header.frame_id = "target_map";
   marker.header.stamp = ros::Time::now();
   marker.ns = name;
   marker.id = 0;
