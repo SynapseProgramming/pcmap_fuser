@@ -171,6 +171,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
     Eigen::Matrix3d rotation_matrix_3d = Eigen::Matrix3d::Identity();
     rotation_matrix_3d.block<2, 2>(0, 0) = estimated_offset.linear();
     Eigen::Quaterniond q(rotation_matrix_3d);
+    q.normalize();
     // set the quaternion to be the one above
     m_fixed_floating_transform.transform.rotation.x = q.x();
     m_fixed_floating_transform.transform.rotation.y = q.y();
