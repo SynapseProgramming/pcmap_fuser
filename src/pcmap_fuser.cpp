@@ -111,29 +111,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
                           target_keypoint.x + target_map_lower_bound.y()));
     }
 
-
-    // publish the lower bound coorinates as markers
-    // addMarker("lower_bound", target_map_lower_bound.x()/10.0,
-    // target_map_lower_bound.y()/10.0); addMarker("source_bound",
-    // source_map_lower_bound.x()/10.0, source_map_lower_bound.y()/10.0);
-    addMarker("ref1", 11.1, -61.62);
-    addMarker("ref2", 9.42, -60.0);
-    addMarker("query1", 13.9, -46.9);
-    addMarker("query2", 13.6, -49.1);
-    addMarker("source_lowest", -60.7, -99.3);
-
-    // find the smallest x and y values in the m_source_map_cloud
-    double min_x = std::numeric_limits<double>::max();
-    double min_y = std::numeric_limits<double>::max();
-    for (auto &point : m_source_map_cloud->points) {
-      if (point.x < min_x) {
-        min_x = point.x;
-      }
-      if (point.y < min_y) {
-        min_y = point.y;
-      }
-    }
-
     std::vector<cv::DMatch> print_matches;
     for (int i = 0; i < 3; i++) {
       print_matches.push_back(matches[i]);
