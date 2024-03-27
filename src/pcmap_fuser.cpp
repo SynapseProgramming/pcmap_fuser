@@ -9,6 +9,9 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_init_pose_sub =
       m_nh.subscribe("/initialpose", 1, &PCMapFuser::initPoseCallback, this);
 
+  m_marker_pub =
+      m_nh.advertise<visualization_msgs::MarkerArray>("/marker", 1, true);
+
   m_target_map_cloud_pub =
       m_nh.advertise<sensor_msgs::PointCloud2>("/target_map_cloud", 1, true);
   m_source_map_cloud_pub =
@@ -41,8 +44,8 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   }
   //  source cloud is the cloud to be transformed.
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
-          "/home/ro/Documents/rooms/decat_bottom.pcd", *m_source_map_cloud) ==
-      -1) {
+          "/home/ro/Documents/rooms/decat_bottom_rotated.pcd",
+          *m_source_map_cloud) == -1) {
     ROS_ERROR("Couldn't read file room_scan2.pcd \n");
   }
 
@@ -66,7 +69,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   cv::normalize(source_map_2d.first, source_map_image, 0, 255, cv::NORM_MINMAX,
                 CV_8UC1);
   cv::namedWindow("source_map", cv::WINDOW_NORMAL);
-  cv::resizeWindow("source_map", 800, 600);
+  cv::resizeWindow("source_map", 922, 1267);
   cv::imshow("source_map", source_map_image);
 
   // compute keypoints and descriptors
@@ -85,7 +88,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   std::vector<cv::DMatch> matches;
   matcher.match(target_descriptors, source_descriptors, matches);
 
-
   // compute offset from initial estimate position
   if (matches.size() >= 3) {
     auto source_map_lower_bound = source_map_2d.second;
@@ -103,17 +105,45 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
       auto target_keypoint = target_keypoints[curr.queryIdx].pt;
       auto source_keypoint = source_keypoints[curr.trainIdx].pt;
       keypoint_pairs.emplace_back(
-          Eigen::Vector2d(source_keypoint.x + source_map_lower_bound.y() + 10,
-                          source_keypoint.y + source_map_lower_bound.x()),
-          Eigen::Vector2d(target_keypoint.x + target_map_lower_bound.y(),
-                          target_keypoint.y + target_map_lower_bound.x()));
+          Eigen::Vector2d(source_keypoint.y + source_map_lower_bound.x() + 10,
+                          source_keypoint.x + source_map_lower_bound.y()),
+          Eigen::Vector2d(target_keypoint.y + target_map_lower_bound.x(),
+                          target_keypoint.x + target_map_lower_bound.y()));
     }
+
+    // print the source image width and height
+    std::cout << "source image width: " << source_map_2d.first.cols
+              << " source image height: " << source_map_2d.first.rows << "\n";
 
     std::cout << "target lower x: " << target_map_lower_bound.x()
               << " target lower y: " << target_map_lower_bound.y() << "\n";
 
     std::cout << "source lower x: " << source_map_lower_bound.x()
               << " source lower y: " << source_map_lower_bound.y() << "\n";
+
+    // publish the lower bound coorinates as markers
+    // addMarker("lower_bound", target_map_lower_bound.x()/10.0,
+    // target_map_lower_bound.y()/10.0); addMarker("source_bound",
+    // source_map_lower_bound.x()/10.0, source_map_lower_bound.y()/10.0);
+    addMarker("ref1", 11.1, -61.62);
+    addMarker("ref2", 9.42, -60.0);
+    addMarker("query1", 13.9, -46.9);
+    addMarker("query2", 13.6, -49.1);
+    addMarker("source_lowest", -60.7, -99.3);
+
+    // find the smallest x and y values in the m_source_map_cloud
+    double min_x = std::numeric_limits<double>::max();
+    double min_y = std::numeric_limits<double>::max();
+    for (auto &point : m_source_map_cloud->points) {
+      if (point.x < min_x) {
+        min_x = point.x;
+      }
+      if (point.y < min_y) {
+        min_y = point.y;
+      }
+    }
+    // print it out
+    std::cout << "min x: " << min_x << " min y: " << min_y << std::endl;
 
     std::vector<cv::DMatch> print_matches;
     for (int i = 0; i < 3; i++) {
@@ -137,7 +167,16 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
     m_fixed_floating_transform.transform.translation.y +=
         estimated_offset.translation().y() / 10.0;
 
-    // TODO: Apply orientation offset
+    // convert the rotation matrix to quaternion
+    Eigen::Matrix3d rotation_matrix_3d = Eigen::Matrix3d::Identity();
+    rotation_matrix_3d.block<2, 2>(0, 0) = estimated_offset.linear();
+    Eigen::Quaterniond q(rotation_matrix_3d);
+    q.normalize();
+    // set the quaternion to be the one above
+    m_fixed_floating_transform.transform.rotation.x = q.x();
+    m_fixed_floating_transform.transform.rotation.y = q.y();
+    m_fixed_floating_transform.transform.rotation.z = q.z();
+    m_fixed_floating_transform.transform.rotation.w = q.w();
 
     // cv::Mat img_matches;
     // cv::drawMatches(target_map_image, target_keypoints, source_map_image,
@@ -225,4 +264,32 @@ void PCMapFuser::tfTimerCallback(const ros::TimerEvent &event) {
   // publish the pointclouds
   m_source_map_cloud_pub.publish(m_source_map_cloud_ros);
   m_target_map_cloud_pub.publish(m_target_map_cloud_ros);
+
+  // publish to marker topic
+  m_marker_pub.publish(markers);
+}
+
+void PCMapFuser::addMarker(std::string name, double x, double y) {
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "target_map";
+  marker.header.stamp = ros::Time::now();
+  marker.ns = name;
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::SPHERE;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = x;
+  marker.pose.position.y = y;
+  marker.pose.position.z = 0;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = 0.5;
+  marker.scale.y = 0.5;
+  marker.scale.z = 0.5;
+  marker.color.a = 1.0;
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+  marker.color.b = 0.0;
+  markers.markers.push_back(marker);
 }

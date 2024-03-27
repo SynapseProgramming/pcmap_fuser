@@ -20,6 +20,8 @@
 #include <opencv2/highgui.hpp>
 #include <pcmap_fuser/density_map.hpp>
 #include <pcmap_fuser/AlignRansac2D.hpp>
+#include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 
 class PCMapFuser {
  public:
@@ -31,12 +33,17 @@ class PCMapFuser {
 
   void tfTimerCallback(const ros::TimerEvent &event);
 
+
+  void addMarker(std::string name, double x, double y);
+
   ros::NodeHandle m_nh;
   ros::NodeHandle m_pnh;
   ros::Subscriber m_init_pose_sub;
   ros::Publisher m_target_map_cloud_pub;
   ros::Publisher m_source_map_cloud_pub;
   ros::Publisher m_final_cloud_pub;
+  ros::Publisher m_marker_pub;
+  visualization_msgs::MarkerArray markers;
 
   ros::Timer m_tf_timer;
 
