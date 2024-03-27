@@ -38,7 +38,4 @@ struct PointPair {
 };
 Eigen::Isometry2d KabschUmeyamaAlignment2D(
     const std::vector<map_closures::PointPair> &keypoint_pairs);
-    
-std::pair<Eigen::Isometry2d, int> RansacAlignment2D(
-    const std::vector<PointPair> &keypoint_pairs);
 }  // namespace map_closures
