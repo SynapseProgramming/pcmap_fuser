@@ -111,15 +111,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
                           target_keypoint.x + target_map_lower_bound.y()));
     }
 
-    // print the source image width and height
-    std::cout << "source image width: " << source_map_2d.first.cols
-              << " source image height: " << source_map_2d.first.rows << "\n";
-
-    std::cout << "target lower x: " << target_map_lower_bound.x()
-              << " target lower y: " << target_map_lower_bound.y() << "\n";
-
-    std::cout << "source lower x: " << source_map_lower_bound.x()
-              << " source lower y: " << source_map_lower_bound.y() << "\n";
 
     // publish the lower bound coorinates as markers
     // addMarker("lower_bound", target_map_lower_bound.x()/10.0,
@@ -142,8 +133,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
         min_y = point.y;
       }
     }
-    // print it out
-    std::cout << "min x: " << min_x << " min y: " << min_y << std::endl;
 
     std::vector<cv::DMatch> print_matches;
     for (int i = 0; i < 3; i++) {
@@ -153,13 +142,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
     // compute the initial translation and rotation
     Eigen::Isometry2d estimated_offset =
         map_closures::KabschUmeyamaAlignment2D(keypoint_pairs);
-
-    // print out the estimated translation and rotation
-    std::cout << "Estimated translation: " << estimated_offset.translation().x()
-              << " " << estimated_offset.translation().y() << std::endl;
-
-    std::cout << "Estimated rotation: " << estimated_offset.linear().matrix()
-              << std::endl;
 
     // apply estimated offset from initial position
     m_fixed_floating_transform.transform.translation.x +=

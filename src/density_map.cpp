@@ -82,9 +82,6 @@ std::pair<cv::Mat, Eigen::Vector2i> GenerateDensityMap(
 
     auto n_rows = max_x - min_x + 1;
     auto n_cols = max_y - min_y + 1;
-    // print out the number of rows and cols
-    std::cout<<"n_rows: "<<n_rows<<"\n";
-    std::cout<<"n_cols: "<<n_cols<<"\n";
     const double range = max_points - min_points;
     cv::Mat density_img(n_rows, n_cols, CV_8UC1, 0.0);
     std::for_each(density_map.cbegin(), density_map.cend(), [&](const auto &pixel) {
