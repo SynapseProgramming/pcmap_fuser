@@ -13,26 +13,27 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include <fast_gicp/gicp/fast_vgicp.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/highgui.hpp>
-#include <pcmap_fuser/density_map.hpp>
 #include <pcmap_fuser/AlignRansac2D.hpp>
-#include <visualization_msgs/MarkerArray.h>
-#include <visualization_msgs/Marker.h>
+#include <pcmap_fuser/density_map.hpp>
 
 class PCMapFuser {
  public:
   PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh);
+
+  void computeInitialEstimate();
 
  private:
   void initPoseCallback(
       const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
 
   void tfTimerCallback(const ros::TimerEvent &event);
-
 
   void addMarker(std::string name, double x, double y);
 

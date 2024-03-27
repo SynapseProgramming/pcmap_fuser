@@ -36,7 +36,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_fixed_floating_transform.child_frame_id = "source_map";
 
   // target cloud is the fixed map.
-
   if (pcl::io::loadPCDFile<pcl::PointXYZ>(
           "/home/ro/Documents/rooms/decat_top.pcd", *m_target_map_cloud) ==
       -1) {
@@ -51,6 +50,38 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
 
   m_orb_extractor = cv::ORB::create();
 
+  pcl::toROSMsg(*m_source_map_cloud, m_source_map_cloud_ros);
+  pcl::toROSMsg(*m_target_map_cloud, m_target_map_cloud_ros);
+  m_source_map_cloud_ros.header.frame_id = "source_map";
+  m_target_map_cloud_ros.header.frame_id = "target_map";
+
+  m_approximate_voxel_filter.setLeafSize(0.2, 0.2, 0.2);
+  m_approximate_voxel_filter.setInputCloud(m_source_map_cloud);
+  m_approximate_voxel_filter.filter(*m_filtered_source_map_cloud);
+
+  // Setting scale dependent NDT parameters
+  // Setting minimum transformation difference for termination
+  // condition.
+  m_ndt.setTransformationEpsilon(0.001);
+  // Setting maximum step size for More-Thuente line search.
+  m_ndt.setStepSize(0.2);
+  // Setting Resolution of NDT grid structure (VoxelGridCovariance).
+  m_ndt.setResolution(1);
+  // Setting max number of registration iterations.
+  m_ndt.setMaximumIterations(100);
+  m_ndt.setInputSource(m_filtered_source_map_cloud);
+  m_ndt.setInputTarget(m_target_map_cloud);
+
+  m_gicp.setResolution(0.2);
+  m_gicp.setNumThreads(4);
+  m_gicp.setInputSource(m_source_map_cloud);
+  m_gicp.setInputTarget(m_target_map_cloud);
+  m_gicp.setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT7);
+
+  computeInitialEstimate();
+}
+
+void PCMapFuser::computeInitialEstimate() {
   std::pair<cv::Mat, Eigen::Vector2i> target_map_2d =
       map_closures::GenerateDensityMap(*m_target_map_cloud, 0.1, 0.05);
 
@@ -148,35 +179,6 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   } else {
     ROS_WARN("Automated initialization is not available.");
   }
-
-  pcl::toROSMsg(*m_source_map_cloud, m_source_map_cloud_ros);
-  pcl::toROSMsg(*m_target_map_cloud, m_target_map_cloud_ros);
-  m_source_map_cloud_ros.header.frame_id = "source_map";
-  m_target_map_cloud_ros.header.frame_id = "target_map";
-
-  m_approximate_voxel_filter.setLeafSize(0.2, 0.2, 0.2);
-  m_approximate_voxel_filter.setInputCloud(m_source_map_cloud);
-  m_approximate_voxel_filter.filter(*m_filtered_source_map_cloud);
-
-  // Setting scale dependent NDT parameters
-  // Setting minimum transformation difference for termination
-  // condition.
-  m_ndt.setTransformationEpsilon(0.001);
-  // Setting maximum step size for More-Thuente line search.
-  m_ndt.setStepSize(0.2);
-  // Setting Resolution of NDT grid structure (VoxelGridCovariance).
-  m_ndt.setResolution(1);
-  // Setting max number of registration iterations.
-  m_ndt.setMaximumIterations(100);
-  m_ndt.setInputSource(m_filtered_source_map_cloud);
-  m_ndt.setInputTarget(m_target_map_cloud);
-
-  m_gicp.setResolution(0.2);
-  m_gicp.setNumThreads(4);
-  m_gicp.setInputSource(m_source_map_cloud);
-  m_gicp.setInputTarget(m_target_map_cloud);
-  //   // set search method
-  m_gicp.setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT7);
 }
 
 void PCMapFuser::initPoseCallback(
