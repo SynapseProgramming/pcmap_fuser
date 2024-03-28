@@ -28,6 +28,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_filtered_source_map_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
   m_transformed.reset(new pcl::PointCloud<pcl::PointXYZ>);
   m_final_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+  m_final_voxelized_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
   // set initial values
   m_fixed_floating_transform.transform.translation.x = 1;
@@ -56,6 +57,7 @@ PCMapFuser::PCMapFuser(ros::NodeHandle &nh, ros::NodeHandle &pnh) {
   m_target_map_cloud_ros.header.frame_id = "target_map";
 
   m_approximate_voxel_filter.setLeafSize(0.2, 0.2, 0.2);
+  m_voxel_grid_filter.setLeafSize(0.1, 0.1, 0.1);
   m_approximate_voxel_filter.setInputCloud(m_source_map_cloud);
   m_approximate_voxel_filter.filter(*m_filtered_source_map_cloud);
 
@@ -210,7 +212,11 @@ void PCMapFuser::initPoseCallback(
                            m_gicp.getFinalTransformation());
 
   *m_final_cloud = *m_target_map_cloud + *m_transformed;
-  pcl::toROSMsg(*m_final_cloud, m_final_cloud_ros);
+  m_voxel_grid_filter.setInputCloud(m_final_cloud);
+  m_voxel_grid_filter.filter(*m_final_voxelized_cloud);
+
+
+  pcl::toROSMsg(*m_final_voxelized_cloud, m_final_cloud_ros);
   m_final_cloud_ros.header.frame_id = "target_map";
   m_final_cloud_pub.publish(m_final_cloud_ros);
 }

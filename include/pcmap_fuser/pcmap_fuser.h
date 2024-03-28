@@ -4,6 +4,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/ndt.h>
@@ -57,11 +58,13 @@ class PCMapFuser {
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_transformed;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_final_cloud;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr m_final_voxelized_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_source_map_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_target_map_cloud;
   pcl::PointCloud<pcl::PointXYZ>::Ptr m_filtered_source_map_cloud;
 
   pcl::ApproximateVoxelGrid<pcl::PointXYZ> m_approximate_voxel_filter;
+  pcl::VoxelGrid<pcl::PointXYZ> m_voxel_grid_filter;
   pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> m_ndt;
   fast_gicp::FastVGICP<pcl::PointXYZ, pcl::PointXYZ> m_gicp;
 
