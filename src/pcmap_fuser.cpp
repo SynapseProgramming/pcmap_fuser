@@ -91,19 +91,19 @@ void PCMapFuser::computeInitialEstimate() {
       map_closures::GenerateDensityMap(*m_source_map_cloud, 0.1, 0.05);
 
   // use opencv functions to display out map
-  cv::Mat target_map_image;
-  cv::normalize(target_map_2d.first, target_map_image, 0, 255, cv::NORM_MINMAX,
-                CV_8UC1);
-  cv::namedWindow("target_map", cv::WINDOW_NORMAL);
-  cv::resizeWindow("target_map", 800, 600);
-  cv::imshow("target_map", target_map_image);
+  // cv::Mat target_map_image;
+  // cv::normalize(target_map_2d.first, target_map_image, 0, 255, cv::NORM_MINMAX,
+  //               CV_8UC1);
+  // cv::namedWindow("target_map", cv::WINDOW_NORMAL);
+  // cv::resizeWindow("target_map", 800, 600);
+  // cv::imshow("target_map", target_map_image);
 
-  cv::Mat source_map_image;
-  cv::normalize(source_map_2d.first, source_map_image, 0, 255, cv::NORM_MINMAX,
-                CV_8UC1);
-  cv::namedWindow("source_map", cv::WINDOW_NORMAL);
-  cv::resizeWindow("source_map", 922, 1267);
-  cv::imshow("source_map", source_map_image);
+  // cv::Mat source_map_image;
+  // cv::normalize(source_map_2d.first, source_map_image, 0, 255, cv::NORM_MINMAX,
+  //               CV_8UC1);
+  // cv::namedWindow("source_map", cv::WINDOW_NORMAL);
+  // cv::resizeWindow("source_map", 922, 1267);
+  // cv::imshow("source_map", source_map_image);
 
   // compute keypoints and descriptors
   std::vector<cv::KeyPoint> target_keypoints;
